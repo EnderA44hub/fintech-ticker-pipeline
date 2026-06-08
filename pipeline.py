@@ -188,7 +188,35 @@ def correr_pipeline():
     finally:
         # Siempre envía el reporte — aunque el pipeline falle
         enviar_reporte(stats)
+        # Abrir motor con los tickers de hoy
+        abrir_motor()
 
+def abrir_motor():
+    """Levanta servidor local y abre el motor en el navegador"""
+    import subprocess
+    import webbrowser
+    import threading
+
+    logger.info("🌐 Levantando servidor local en http://localhost:8080")
+
+    # Levanta servidor en segundo plano
+    def servidor():
+        import http.server
+        import socketserver
+        os.chdir(os.path.dirname(os.path.abspath(__file__)))
+        handler = http.server.SimpleHTTPRequestHandler
+        handler.log_message = lambda *args: None  # silencia logs del servidor
+        with socketserver.TCPServer(("", 8080), handler) as httpd:
+            httpd.serve_forever()
+
+    t = threading.Thread(target=servidor, daemon=True)
+    t.start()
+
+    # Espera un segundo y abre el navegador
+    import time
+    time.sleep(1)
+    webbrowser.open("http://localhost:8080/motor/index.html")
+    logger.info("✅ Motor abierto en el navegador")
 
 def correr_ahora():
     logger.info("Corriendo pipeline manualmente...")
