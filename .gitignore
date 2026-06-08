@@ -20,3 +20,6 @@ __pycache__/
 # CSV y Parquet locales
 *.parquet
 *.csv
+
+# Resultados personales — no subir
+resultados/
