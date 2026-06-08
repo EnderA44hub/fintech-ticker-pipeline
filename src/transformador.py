@@ -21,29 +21,28 @@ def aplicar_filtros_gold(ticker, df):
 
     # Filtro 1 — Sin dividendos + sector permitido + no penny stock
     try:
-        from src.cache_dividendos import obtener_dividendo
+        from src.cache_dividendos import obtener_info_ticker
         info = yf.Ticker(ticker).info
+        datos = obtener_info_ticker(ticker, info)
 
         # Verificar dividendos
-        dividendo = obtener_dividendo(ticker, info)
-        if dividendo > 0:
-            motivos_rechazo.append(f"paga dividendos ({dividendo:.2%})")
+        if datos["dividendo"] > 0:
+            motivos_rechazo.append(f"paga dividendos ({datos['dividendo']:.2%})")
 
         # Verificar sector
-        sector = info.get("sector", "").lower()
-        industria = info.get("industry", "").lower()
+        sector = datos["sector"].lower()
+        industria = datos["industria"].lower()
         if any(s in sector for s in SECTORES_EXCLUIDOS) or \
            any(s in industria for s in SECTORES_EXCLUIDOS):
             motivos_rechazo.append(f"sector excluido: {sector} / {industria}")
 
         # Verificar penny stock (defensa adicional)
-        precio = info.get("currentPrice", 0) or info.get("regularMarketPrice", 0) or 0
+        precio = datos["precio"]
         if precio > 0 and precio < PRECIO_MINIMO:
             motivos_rechazo.append(f"penny stock: precio ${precio:.2f} < ${PRECIO_MINIMO}")
 
     except Exception as e:
         motivos_rechazo.append(f"no se pudo verificar: {e}")
-
     # Filtro 2 — Mínimo 10 años de historia
     años_historia = (df.index[-1] - df.index[0]).days / 365
     if años_historia < AÑOS_MINIMOS:
@@ -107,6 +106,15 @@ def transformar_todos():
         else:
             rechazados.append((ticker, motivos))
             logger.warning(f"{ticker}: ❌ No pasó Gold — {motivos}")
+
+    # Guardar el universo Gold para el pipeline diario
+    import json
+    with open("universo_gold.json", "w") as f:
+        json.dump({
+            "fecha_generado": pd.Timestamp.now().isoformat(),
+            "tickers": aprobados
+        }, f, indent=2)
+    logger.info(f"💾 Universo Gold guardado: {len(aprobados)} tickers")
 
     logger.info("=" * 40)
     logger.info(f"✅ Gold:      {len(aprobados)} tickers")
