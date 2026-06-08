@@ -10,6 +10,8 @@ GOLD_PATH = "data/gold"
 
 # Filtros Gold
 AÑOS_MINIMOS = 10
+PRECIO_MINIMO = 10
+SECTORES_EXCLUIDOS = ["biotechnology", "biotech", "shell companies", "blank check"]
 
 def aplicar_filtros_gold(ticker, df):
     motivos_rechazo = []
@@ -17,15 +19,30 @@ def aplicar_filtros_gold(ticker, df):
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = df.columns.get_level_values(0)
 
-    # Filtro 1 — Sin dividendos (con caché)
+    # Filtro 1 — Sin dividendos + sector permitido + no penny stock
     try:
         from src.cache_dividendos import obtener_dividendo
         info = yf.Ticker(ticker).info
+
+        # Verificar dividendos
         dividendo = obtener_dividendo(ticker, info)
         if dividendo > 0:
             motivos_rechazo.append(f"paga dividendos ({dividendo:.2%})")
+
+        # Verificar sector
+        sector = info.get("sector", "").lower()
+        industria = info.get("industry", "").lower()
+        if any(s in sector for s in SECTORES_EXCLUIDOS) or \
+           any(s in industria for s in SECTORES_EXCLUIDOS):
+            motivos_rechazo.append(f"sector excluido: {sector} / {industria}")
+
+        # Verificar penny stock (defensa adicional)
+        precio = info.get("currentPrice", 0) or info.get("regularMarketPrice", 0) or 0
+        if precio > 0 and precio < PRECIO_MINIMO:
+            motivos_rechazo.append(f"penny stock: precio ${precio:.2f} < ${PRECIO_MINIMO}")
+
     except Exception as e:
-        motivos_rechazo.append(f"no se pudo verificar dividendos: {e}")
+        motivos_rechazo.append(f"no se pudo verificar: {e}")
 
     # Filtro 2 — Mínimo 10 años de historia
     años_historia = (df.index[-1] - df.index[0]).days / 365

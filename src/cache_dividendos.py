@@ -29,40 +29,61 @@ def cache_vigente(entrada):
     except Exception:
         return False
 
-def obtener_dividendo(ticker, info_yahoo):
+def obtener_info_ticker(ticker, info_yahoo):
     """
-    Retorna el dividendo de un ticker.
-    Primero busca en caché, si no existe o expiró pregunta a Yahoo.
+    Retorna toda la info relevante de un ticker.
+    Primera vez consulta Yahoo y guarda todo en caché.
+    Siguientes veces lee del caché sin llamar a Yahoo.
     """
     cache = cargar_cache()
 
     # ¿Está en caché y vigente?
     if ticker in cache and cache_vigente(cache[ticker]):
-        return cache[ticker]["dividendo"]
+        entrada = cache[ticker]
+        return {
+            "dividendo": entrada.get("dividendo", 0),
+            "sector": entrada.get("sector", ""),
+            "industria": entrada.get("industria", ""),
+            "precio": entrada.get("precio", 0)
+        }
 
-    # Si no — leer de Yahoo y guardar en caché
+    # Si no — leer de Yahoo y guardar TODO en caché
     try:
         dividendo = info_yahoo.get("dividendYield", 0) or 0
         if dividendo > 1:
             dividendo = dividendo / 100
 
+        sector = info_yahoo.get("sector", "") or ""
+        industria = info_yahoo.get("industry", "") or ""
+        precio = info_yahoo.get("currentPrice", 0) or \
+                 info_yahoo.get("regularMarketPrice", 0) or 0
+
         cache[ticker] = {
             "dividendo": dividendo,
+            "sector": sector,
+            "industria": industria,
+            "precio": precio,
             "fecha": datetime.now().isoformat()
         }
         guardar_cache(cache)
-        return dividendo
+
+        return {
+            "dividendo": dividendo,
+            "sector": sector,
+            "industria": industria,
+            "precio": precio
+        }
 
     except Exception as e:
-        logger.warning(f"{ticker}: error obteniendo dividendo — {e}")
-        return 0
+        logger.warning(f"{ticker}: error obteniendo info — {e}")
+        return {"dividendo": 0, "sector": "", "industria": "", "precio": 0}
 
 def stats_cache():
     """Muestra estadísticas del caché"""
     cache = cargar_cache()
     vigentes = sum(1 for v in cache.values() if cache_vigente(v))
     expirados = len(cache) - vigentes
-    logger.info(f"Caché dividendos: {len(cache)} tickers | {vigentes} vigentes | {expirados} expirados")
+    logger.info(f"Caché: {len(cache)} tickers | {vigentes} vigentes | {expirados} expirados")
 
 if __name__ == "__main__":
     stats_cache()
