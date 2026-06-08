@@ -1,0 +1,22 @@
+# Credenciales — NUNCA subir
+.env
+
+# Datos — demasiado pesados para GitHub
+data/bronze/
+data/silver/
+data/silver_dead_letter/
+data/gold/
+data/listos_para_hoy/
+cache_dividendos.json
+
+# Logs
+logs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# CSV y Parquet locales
+*.parquet
+*.csv
