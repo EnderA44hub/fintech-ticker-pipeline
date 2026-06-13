@@ -224,4 +224,3 @@ The Gold universe (~965 tickers) provides enough variety for **24+ days of non-r
 
 ---
 
-*Built from scratch in one day as a learning project. Every concept — Bronze/Silver/Gold layers, Dead Letter Queue, incremental loading, dividend caching — was derived from first principles before implementing.*
